@@ -1,0 +1,2 @@
+P001,Nguyen Van A,20,Male,Flu,2024-01-01
+P002,Tran Thi B,35,Female,Diabetes,2024-02-10
