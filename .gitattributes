@@ -1,0 +1,5 @@
+* text=auto
+
+# Force Unix line endings for shell scripts so they don't break on Linux/Mac
+*.sh text eol=lf
+*.bat text eol=crlf

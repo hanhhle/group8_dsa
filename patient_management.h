@@ -20,6 +20,10 @@ typedef struct Node {
     struct Node* next;
 } Node;
 
+int readLine(char *buffer, size_t size);
+int readInt(const char *prompt, int *outValue);
+int isValidDate(const char *date);
+
 Node* createNode(Patient p);
 void addPatient(Node **head, Patient p);
 int isDuplicate(Node *head, char id[]);
@@ -31,7 +35,7 @@ void loadFromFile(Node **head);
 void saveToFile(Node *head);
 void freeList(Node *head);
 
-void displayPatients(Node *head);
+void displayAllPatients(Node *head);
 void mergeSort(Node **headRef);
 
 #endif // PATIENT_MANAGEMENT_H
