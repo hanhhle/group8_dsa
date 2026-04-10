@@ -42,22 +42,55 @@ void updatePatient(Node *head, char id[]) {
         return;
     }
 
-    printf("\n--- Updating Information for Patient: %s ---\n", target->data.name);
+    // Create a temporary copy to avoid partial updates if the user cancels halfway
+    Patient tempPatient = target->data;
+    char buffer[128]; // Temporary buffer for reading inputs
 
-    printf("Enter new name (current: %s): ", target->data.name);
-    scanf(" %49[^\n]", target->data.name);
+    printf("\n--- Updating Information for Patient: %s ---\n", tempPatient.name);
+    printf("(Press Enter to skip and keep current value)\n");
 
-    printf("Enter new age (current: %d): ", target->data.age);
-    scanf("%d", &target->data.age);
+    printf("Enter new name (current: %s): ", tempPatient.name);
+    if (!readLine(buffer, sizeof(tempPatient.name))) return;
+    if (strlen(buffer) > 0) {
+        strcpy(tempPatient.name, buffer);
+    }
 
-    printf("Enter new gender (current: %s): ", target->data.gender);
-    scanf(" %9[^\n]", target->data.gender);
+    printf("Enter new age (current: %d): ", tempPatient.age);
+    if (!readLine(buffer, sizeof(buffer))) return;
+    if (strlen(buffer) > 0) {
+        char *endPtr;
+        long val = strtol(buffer, &endPtr, 10);
+        if (endPtr == buffer || *endPtr != '\0' || val <= 0) {
+            printf("Error: Invalid age input. Update canceled.\n");
+            return;
+        }
+        tempPatient.age = (int)val;
+    }
 
-    printf("Enter new disease/diagnosis (current: %s): ", target->data.disease);
-    scanf(" %99[^\n]", target->data.disease);
+    printf("Enter new gender (current: %s): ", tempPatient.gender);
+    if (!readLine(buffer, sizeof(tempPatient.gender))) return;
+    if (strlen(buffer) > 0) {
+        strcpy(tempPatient.gender, buffer);
+    }
 
-    printf("Enter new admission date [DD/MM/YYYY] (current: %s): ", target->data.admissionDate);
-    scanf(" %10[^\n]", target->data.admissionDate);
+    printf("Enter new disease/diagnosis (current: %s): ", tempPatient.disease);
+    if (!readLine(buffer, sizeof(tempPatient.disease))) return;
+    if (strlen(buffer) > 0) {
+        strcpy(tempPatient.disease, buffer);
+    }
+
+    printf("Enter new admission date [YYYY-MM-DD] (current: %s): ", tempPatient.admissionDate);
+    if (!readLine(buffer, sizeof(tempPatient.admissionDate))) return;
+    if (strlen(buffer) > 0) {
+        if (!isValidDate(buffer)) {
+            printf("Error: Invalid admission date format. Update canceled.\n");
+            return;
+        }
+        strcpy(tempPatient.admissionDate, buffer);
+    }
+
+    // If we made it this far, all inputs were valid. Apply the changes!
+    target->data = tempPatient;
 
     printf("-> Success: Patient information updated successfully!\n");
 }
