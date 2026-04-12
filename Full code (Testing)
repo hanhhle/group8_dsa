@@ -1,0 +1,271 @@
+#include "patient_management.h"
+
+// =======================
+// 2.1 CREATE NODE (FROM PATIENT)
+// =======================
+Node* createNode(Patient p) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+
+    if (newNode == NULL) {
+        printf("Memory allocation failed\n");
+        return NULL;
+    }
+
+    newNode->data = p;
+    newNode->next = NULL;
+
+    return newNode;
+}
+
+// =======================
+// 2.2 ADD PATIENT TO LIST (HELPER FUNCTION)
+// =======================
+void addPatient(Node **head, Patient p) {
+    Node* newNode = createNode(p);
+
+    if (newNode == NULL) return;
+
+    if (*head == NULL) {
+        *head = newNode;
+    } else {
+        Node* temp = *head;
+        while (temp->next != NULL) {
+            temp = temp->next;
+        }
+        temp->next = newNode;
+    }
+}
+
+// =======================
+// 2.3 LOAD DATA FROM FILE
+// =======================
+void loadFromFile(Node **head) {
+    FILE *f = fopen("patients.txt", "r");
+
+    if (f == NULL) {
+        printf("Cannot open file\n");
+        return;
+    }
+
+    Patient p;
+
+    while (fscanf(f, "%9[^,],%49[^,],%d,%9[^,],%99[^,],%10[^\n]",
+                  p.id, p.name, &p.age, p.gender, p.disease, p.admissionDate) == 6) {
+
+        addPatient(head, p);
+    }
+
+    fclose(f);
+}
+
+// =======================
+// 2.5 ADD NEW PATIENT (USER INPUT)
+// =======================
+void addNewPatient(Node **head) {
+    Patient p;
+
+    printf("Enter ID: ");
+    scanf("%s", p.id);
+
+    if (isDuplicate(*head, p.id)) {
+        printf("Error: ID already exists!\n");
+        return;
+    }
+
+    printf("Enter Name: ");
+    scanf(" %[^\n]", p.name);
+
+    printf("Enter Age: ");
+    scanf("%d", &p.age);
+
+    printf("Enter Gender: ");
+    scanf("%s", p.gender);
+
+    printf("Enter Disease: ");
+    scanf(" %[^\n]", p.disease);
+
+    printf("Enter Admission Date (YYYY-MM-DD): ");
+    scanf("%s", p.admissionDate);
+
+    addPatient(head, p);
+
+    printf("-> Patient added successfully!\n");
+}
+
+// =======================
+// 2.7 SEARCH PATIENT
+// =======================
+Node* searchPatient(Node *head, char id[]) {
+    Node *temp = head;
+
+    while (temp != NULL) {
+        if (strcmp(temp->data.id, id) == 0) {
+            return temp;
+        }
+        temp = temp->next;
+    }
+
+    return NULL;
+}
+
+// =======================
+// 2.8 DELETE PATIENT
+// =======================
+void deletePatient(Node **head, char id[]) {
+    Node *temp = *head;
+    Node *prev = NULL;
+
+    if (temp != NULL && strcmp(temp->data.id, id) == 0) {
+        *head = temp->next;
+        free(temp);
+        printf("Deleted successfully!\n");
+        return;
+    }
+
+    while (temp != NULL && strcmp(temp->data.id, id) != 0) {
+        prev = temp;
+        temp = temp->next;
+    }
+
+    if (temp == NULL) {
+        printf("Patient not found!\n");
+        return;
+    }
+
+    prev->next = temp->next;
+    free(temp);
+    printf("Deleted successfully!\n");
+}
+
+// =======================
+// 2.12 SAVE DATA TO FILE
+// =======================
+void saveToFile(Node *head) {
+    FILE *f = fopen("patients.txt", "w");
+
+    if (f == NULL) {
+        printf("Cannot open file\n");
+        return;
+    }
+
+    Node *temp = head;
+
+    while (temp != NULL) {
+        fprintf(f, "%s,%s,%d,%s,%s,%s\n",
+                temp->data.id,
+                temp->data.name,
+                temp->data.age,
+                temp->data.gender,
+                temp->data.disease,
+                temp->data.admissionDate);
+
+        temp = temp->next;
+    }
+
+    fclose(f);
+}
+
+// =======================
+// 2.13 FREE MEMORY
+// =======================
+void freeList(Node *head) {
+    Node *temp;
+
+    while (head != NULL) {
+        temp = head;
+        head = head->next;
+        free(temp);
+    }
+}
+
+// =======================
+// DISPLAY
+// =======================
+void displayPatients(Node *head) {
+    Node *temp = head;
+
+    while (temp != NULL) {
+        printf("%s | %s | %d | %s | %s | %s\n",
+               temp->data.id,
+               temp->data.name,
+               temp->data.age,
+               temp->data.gender,
+               temp->data.disease,
+               temp->data.admissionDate);
+        temp = temp->next;
+    }
+}
+
+// =======================
+// CHECK DUPLICATE
+// =======================
+int isDuplicate(Node *head, char id[]) {
+    return searchPatient(head, id) != NULL;
+}
+
+// =======================
+// MAIN MENU
+// =======================
+int main() {
+    Node *head = NULL;
+    int choice;
+    char id[10];
+
+    loadFromFile(&head);
+
+    do {
+        printf("\n===== PATIENT MANAGEMENT SYSTEM =====\n");
+        printf("1. Add new patient\n");
+        printf("2. Display all patients\n");
+        printf("3. Search patient\n");
+        printf("4. Delete patient\n");
+        printf("5. Save to file\n");
+        printf("6. Exit\n");
+        printf("Choose: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                addNewPatient(&head);
+                break;
+
+            case 2:
+                displayPatients(head);
+                break;
+
+            case 3: {
+                printf("Enter ID: ");
+                scanf("%s", id);
+                Node* found = searchPatient(head, id);
+                if (found)
+                    printf("Found: %s | %s\n", found->data.id, found->data.name);
+                else
+                    printf("Not found!\n");
+                break;
+            }
+
+            case 4:
+                printf("Enter ID to delete: ");
+                scanf("%s", id);
+                deletePatient(&head, id);
+                break;
+
+            case 5:
+                saveToFile(head);
+                printf("Saved successfully!\n");
+                break;
+
+            case 6:
+                saveToFile(head);
+                freeList(head);
+                printf("Exiting...\n");
+                break;
+
+            default:
+                printf("Invalid choice!\n");
+        }
+
+    } while (choice != 6);
+
+    return 0;
+}
