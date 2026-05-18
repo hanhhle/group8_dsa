@@ -3,24 +3,25 @@
 
 #include <stdio.h>
 #include <stdlib.h> 
+#include <string.h>
+#include <ctype.h>
 
 struct Doctor {
-    char doctorId[10];          // Doctor ID
-    char name[50];              // Doctor name
-    char specialization[50];    // Medical specialization
+    char doctorId[10];
+    char name[50];
+    char specialization[50];
 };
 
 struct Medicine {
-    char medicineId[10];        // Medicine ID
-    char medicineName[50];      // Medicine name
-    double price;               // Medicine price
+    char medicineId[10];
+    char medicineName[50];
+    double price;
 };
 
-
 struct Treatment {
-    char diagnosis[100];            // Detailed diagnosis
-    char method[150];               // Treatment method
-    char prescribedMedicineId[10];  // Prescribed medicine ID
+    char diagnosis[100];
+    char method[150];
+    char prescribedMedicineId[10];
 };
 
 struct VisitRecord {
@@ -30,7 +31,7 @@ struct VisitRecord {
     struct Treatment currentTreatment;
 };
 
-struct Patient {
+typedef struct {
     char id[10];
     char name[50];
     int age;
@@ -38,26 +39,32 @@ struct Patient {
     struct VisitRecord* history;
     int visitCount;
     int capacity;
-};
+} Patient;
 
 typedef struct Node {
-    struct Patient data;
+    Patient data;
     struct Node* next;
 } Node;
 
-// 1. PATIENT MANAGEMENT MODULE
-Node* createNode(struct Patient p);
-void addPatient(Node **head, struct Patient p);
+// CRUD
+Node* createNode(Patient p);
+void addPatient(Node **head, Patient p);
 Node* searchPatient(Node *head, char id[]);
 void deletePatient(Node **head, char id[]);
-void displayPatients(Node *head);
 void updatePatient(Node *head, char id[]);
+
+// File
 void saveToFile(Node *head);
 void loadFromFile(Node **head);
 void freeList(Node *head);
 
-// 2. VISIT HISTORY MANAGEMENT MODULE
-void addVisitRecord(struct Patient *p,
-                    struct VisitRecord newVisit);
-void displayVisitHistory(struct Patient *p);
-void expandVisitHistory(struct Patient *p);
+// Utility
+void displayAllPatients(Node *head);
+void mergeSort(Node** headRef);
+
+int isDuplicate(Node *head, char id[]);
+int readLine(char *buffer, size_t size);
+int isValidDate(const char *date);
+int readInt(const char *prompt, int *outValue);
+
+#endif // PATIENT_MANAGEMENT_H
