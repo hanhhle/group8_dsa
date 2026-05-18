@@ -3,36 +3,20 @@
 
 #include <stdio.h>
 #include <stdlib.h> 
-#include <string.h>
-#include <ctype.h>
-
-struct Doctor {
-    char doctorId[10];
-    char name[50];
-    char specialization[50];
-};
-
-struct Medicine {
-    char medicineId[10];
-    char medicineName[50];
-    double price;
-};
-
-struct Treatment {
-    char diagnosis[100];
-    char method[150];
-    char prescribedMedicineId[10];
-};
+#include <string.h> 
+#include <ctype.h>  
 
 struct VisitRecord {
     char arrivalDate[11];
     char symptoms[100];
-    struct Doctor assignedDoctor;
-    struct Treatment currentTreatment;
+    char doctorName[50];
+    char treatment[256];
+    char prescribedMedicine[100];
 };
 
 typedef struct {
     char id[10];
+    char phoneNumber[10];
     char name[50];
     int age;
     char gender[10];
@@ -46,19 +30,18 @@ typedef struct Node {
     struct Node* next;
 } Node;
 
-// CRUD
 Node* createNode(Patient p);
 void addPatient(Node **head, Patient p);
 Node* searchPatient(Node *head, char id[]);
+Node* searchPatientByPhone(Node *head, char phone[]); // Hàm mới tìm bằng SĐT
+
 void deletePatient(Node **head, char id[]);
 void updatePatient(Node *head, char id[]);
 
-// File
 void saveToFile(Node *head);
 void loadFromFile(Node **head);
 void freeList(Node *head);
 
-// Utility
 void displayAllPatients(Node *head);
 void mergeSort(Node** headRef);
 

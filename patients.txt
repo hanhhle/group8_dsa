@@ -1,2 +1,2 @@
-01,Le Hoang Anh,20,Female,2|2024-04-18,headache,Do Thi Phuong,normal|2026-05-18,headache, dizziness, high fever,Do Thi Phuong,viral fever
-02,Le Ngoc Huyen,21,Female,1|2024-04-18,headache, nausea,Do To Uyen,meningitis
+1,038912083,Le Hoang Anh,20,Female,1|2026-04-18,headache,Do Thi Phuong,sleep early,panadol
+2,035771974,Le Thu Huyen,32,Female,1|2026-04-18,headache, nausea,Do To Uyen,meningitis, hospitalization required soon,panadol extra

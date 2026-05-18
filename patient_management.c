@@ -1,38 +1,29 @@
 #include "patient_management.h"
+
+// ==========================================
+// NHÓM HÀM TIỆN ÍCH (VALIDATION & INPUT)
+// ==========================================
 int readLine(char *buffer, size_t size) {
     if (fgets(buffer, (int)size, stdin) == NULL) {
         return 0;
     }
-
+    // Chống trôi lệnh tuyệt đối
     if (strchr(buffer, '\n') != NULL) {
         buffer[strcspn(buffer, "\n")] = '\0';
     } else {
         int c;
         while ((c = getchar()) != '\n' && c != EOF);
     }
-
     return 1;
 }
 
 int isValidDate(const char *date) {
-    if (strlen(date) != 10) {
-        return 0;
-    }
-
-    if (date[4] != '-' || date[7] != '-') {
-        return 0;
-    }
-
+    if (strlen(date) != 10) return 0;
+    if (date[4] != '-' || date[7] != '-') return 0;
     for (int i = 0; i < 10; i++) {
-        if (i == 4 || i == 7) {
-            continue;
-        }
-
-        if (!isdigit((unsigned char)date[i])) {
-            return 0;
-        }
+        if (i == 4 || i == 7) continue;
+        if (!isdigit((unsigned char)date[i])) return 0;
     }
-
     return 1;
 }
 
@@ -42,19 +33,18 @@ int readInt(const char *prompt, int *outValue) {
     long value;
 
     printf("%s", prompt);
-    if (!readLine(line, sizeof(line))) {
-        return 0;
-    }
+    if (!readLine(line, sizeof(line))) return 0;
 
     value = strtol(line, &endPtr, 10);
-    if (endPtr == line || *endPtr != '\0') {
-        return 0;
-    }
+    if (endPtr == line || *endPtr != '\0') return 0;
 
     *outValue = (int)value;
     return 1;
 }
 
+// ==========================================
+// NHÓM HÀM GIAO DIỆN & NHẬP XUẤT (UI)
+// ==========================================
 static void displayPatientDetail(const Node *node) {
     if (node == NULL) return;
 
@@ -62,68 +52,114 @@ static void displayPatientDetail(const Node *node) {
     printf("              PATIENT DETAILS               \n");
     printf("============================================\n");
     printf("ID: %s | Name: %s\n", node->data.id, node->data.name);
-    printf("Age: %d | Gender: %s\n", node->data.age, node->data.gender);
+    printf("Phone: %s | Age: %d | Gender: %s\n", node->data.phoneNumber, node->data.age, node->data.gender);
     printf("Total Visits: %d\n", node->data.visitCount);
     printf("--------------------------------------------\n");
-    
+
     for (int i = 0; i < node->data.visitCount; i++) {
         printf("[Visit %d] - Date: %s\n", i + 1, node->data.history[i].arrivalDate);
         printf(" * Symptoms : %s\n", node->data.history[i].symptoms);
-        printf(" * Doctor   : %s\n", node->data.history[i].assignedDoctor.name);
-        printf(" * Diagnosis: %s\n", node->data.history[i].currentTreatment.diagnosis);
+        printf(" * Doctor   : %s\n", node->data.history[i].doctorName);
+        printf(" * Treatment: %s\n", node->data.history[i].treatment);
+        printf(" * Medicine : %s\n", node->data.history[i].prescribedMedicine);
         printf("- - - - - - - - - - - - - - - - - - - - - - \n");
     }
 }
 
-static struct VisitRecord tempVisit; // Biến tạm để lưu dữ liệu lần khám đầu
+// Hàm tự sinh số thứ tự tiếp theo (1, 2, 3...)
+static int getNextIdNumber(Node *head) {
+    int maxNum = 0;
+    Node *temp = head;
+    while (temp != NULL) {
+        int num = atoi(temp->data.id);
+        if (num > maxNum) maxNum = num;
+        temp = temp->next;
+    }
+    return maxNum + 1;
+}
 
+static struct VisitRecord tempVisit; 
+
+// Hàm nghiệp vụ Tiếp nhận bệnh nhân
 static int inputNewPatient(Node *head, Patient *p) {
+    char buffer[128]; 
     int age;
 
-    printf("Enter patient ID (max 9 chars): ");
-    if (!readLine(p->id, sizeof(p->id)) || strlen(p->id) == 0) return 0;
+    printf("\n--- PATIENT RECEPTION ---\n");
+    printf("Enter Patient's Phone Number: ");
+    
+    if (!readLine(buffer, sizeof(buffer)) || strlen(buffer) == 0) return 0;
+    
+    snprintf(p->phoneNumber, sizeof(p->phoneNumber), "%s", buffer);
+    
+    Node *existing = searchPatientByPhone(head, p->phoneNumber);
+    
+    if (existing != NULL) {
+        printf("-> System Alert: Phone number found in database!\n");
+        printf("   [ ID: %s | Name: %s | Age: %d ]\n", existing->data.id, existing->data.name, existing->data.age);
+        
+        snprintf(p->id, sizeof(p->id), "%s", existing->data.id);
+        snprintf(p->name, sizeof(p->name), "%s", existing->data.name);
+        p->age = existing->data.age;
+        snprintf(p->gender, sizeof(p->gender), "%s", existing->data.gender);
+    } else {
+        printf("-> System Alert: Phone number NOT found! Registering a new profile...\n");
+        
+        int nextNum = getNextIdNumber(head);
+        // ĐÃ ĐỔI: Sử dụng "%d" thay vì "%02d" để sinh ID dạng số thuần túy: 1, 2, 3...
+        snprintf(p->id, sizeof(p->id), "%d", nextNum);
+        
+        printf("-> Assigned New ID: %s\n", p->id);
 
-    // Chỉ bắt nhập Tên, Tuổi nếu là BỆNH NHÂN MỚI TOANH
-    if (!isDuplicate(head, p->id)) {
         printf("Enter patient name: ");
-        if (!readLine(p->name, sizeof(p->name))) return 0;
+        if (!readLine(buffer, sizeof(buffer))) return 0;
+        snprintf(p->name, sizeof(p->name), "%s", buffer);
 
         if (!readInt("Enter age: ", &age) || age <= 0) return 0;
         p->age = age;
 
         printf("Enter gender: ");
-        if (!readLine(p->gender, sizeof(p->gender))) return 0;
-    } else {
-        printf("-> Patient exists! Please enter new visit details.\n");
+        if (!readLine(buffer, sizeof(buffer))) return 0;
+        snprintf(p->gender, sizeof(p->gender), "%s", buffer);
     }
 
-    // --- NHẬP THÔNG TIN CHO ĐỢT KHÁM NÀY ---
+    // NHẬP LỊCH SỬ KHÁM 
+    printf("\n--- Enter Visit Details ---\n");
     printf("Enter arrival date [YYYY-MM-DD]: ");
-    if (!readLine(tempVisit.arrivalDate, sizeof(tempVisit.arrivalDate)) || !isValidDate(tempVisit.arrivalDate)) {
+    if (!readLine(buffer, sizeof(buffer)) || !isValidDate(buffer)) {
         printf("Error: Invalid date format.\n");
         return 0;
     }
+    snprintf(tempVisit.arrivalDate, sizeof(tempVisit.arrivalDate), "%s", buffer);
 
     printf("Enter symptoms: ");
-    readLine(tempVisit.symptoms, sizeof(tempVisit.symptoms));
+    if (readLine(buffer, sizeof(buffer))) {
+        snprintf(tempVisit.symptoms, sizeof(tempVisit.symptoms), "%s", buffer);
+    }
 
     printf("Enter Doctor's name: ");
-    readLine(tempVisit.assignedDoctor.name, sizeof(tempVisit.assignedDoctor.name));
+    if (readLine(buffer, sizeof(buffer))) {
+        snprintf(tempVisit.doctorName, sizeof(tempVisit.doctorName), "%s", buffer);
+    }
 
-    printf("Enter Diagnosis: ");
-    readLine(tempVisit.currentTreatment.diagnosis, sizeof(tempVisit.currentTreatment.diagnosis));
+    printf("Enter Treatment Details: ");
+    if (readLine(buffer, sizeof(buffer))) {
+        snprintf(tempVisit.treatment, sizeof(tempVisit.treatment), "%s", buffer);
+    }
 
-    // Móc con trỏ history của p vào biến tạm để truyền sang hàm addPatient
-    p->history = &tempVisit; 
+    printf("Enter Prescribed Medicine: ");
+    if (readLine(buffer, sizeof(buffer))) {
+        snprintf(tempVisit.prescribedMedicine, sizeof(tempVisit.prescribedMedicine), "%s", buffer);
+    }
 
+    p->history = &tempVisit;
     return 1;
 }
 
 static int menu(void) {
     int choice;
-
     printf("\n========== Patient Management Menu ==========\n");
-    printf("1. Add new patient\n");
+    printf("1. Patient Reception / Registration\n");
     printf("2. Search patient by ID\n");
     printf("3. Update patient information\n");
     printf("4. Delete patient\n");
@@ -135,31 +171,23 @@ static int menu(void) {
     if (!readInt("Choose an option (1-8): ", &choice)) {
         return -1;
     }
-
     return choice;
 }
 
 // =======================
-// 2.1 CREATE NODE (FROM PATIENT)
+// TẠO NODE & QUẢN LÝ FILE
 // =======================
-Node* createNode(Patient p) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
-
+Node *createNode(Patient p) {
+    Node *newNode = (Node *)malloc(sizeof(Node));
     if (newNode == NULL) {
         printf("Memory allocation failed\n");
         return NULL;
     }
-
     newNode->data = p;
     newNode->next = NULL;
-
     return newNode;
 }
 
-
-// =======================
-// 2.3 LOAD DATA FROM FILE
-// =======================
 void loadFromFile(Node **head) {
     FILE *f = fopen("patients.txt", "r");
     if (f == NULL) {
@@ -167,55 +195,50 @@ void loadFromFile(Node **head) {
         return;
     }
 
-    char line[2048]; // Buffer lớn để chứa nguyên 1 dòng dài
+    char line[2048]; 
     while (fgets(line, sizeof(line), f)) {
-        line[strcspn(line, "\n")] = 0; // Xóa ký tự xuống dòng
-        if(strlen(line) < 5) continue;
+        line[strcspn(line, "\n")] = 0; 
+        if (strlen(line) < 5) continue;
 
         Patient p;
         int vCount = 0;
-        
-        // Cắt khúc đầu tiên (trước dấu |) để lấy thông tin cơ bản
+
         char *token = strtok(line, "|");
-        if(token == NULL) continue;
-        
-        sscanf(token, "%[^,],%[^,],%d,%[^,],%d", p.id, p.name, &p.age, p.gender, &vCount);
-        
+        if (token == NULL) continue;
+
+        sscanf(token, "%[^,],%[^,],%[^,],%d,%[^,],%d", 
+               p.id, p.phoneNumber, p.name, &p.age, p.gender, &vCount);
+
         p.visitCount = vCount;
         p.capacity = (vCount > 0) ? vCount : 2;
-        // Cấp phát mảng động
-        p.history = (struct VisitRecord*)malloc(p.capacity * sizeof(struct VisitRecord));
+        p.history = (struct VisitRecord *)malloc(p.capacity * sizeof(struct VisitRecord));
 
-        // Cắt các khúc tiếp theo (sau dấu |) để nạp lịch sử khám
         for (int i = 0; i < vCount; i++) {
             token = strtok(NULL, "|");
             if (token != NULL) {
-                // Parse chuỗi con: Date,Symptoms,Doctor,Diagnosis
                 char *sub = token;
                 char *comma;
-                
-                comma = strchr(sub, ','); if(comma){ *comma=0; strcpy(p.history[i].arrivalDate, sub); sub=comma+1; }
-                comma = strchr(sub, ','); if(comma){ *comma=0; strcpy(p.history[i].symptoms, sub); sub=comma+1; }
-                comma = strchr(sub, ','); if(comma){ *comma=0; strcpy(p.history[i].assignedDoctor.name, sub); sub=comma+1; }
-                strcpy(p.history[i].currentTreatment.diagnosis, sub);
+
+                comma = strchr(sub, ','); if (comma) { *comma = 0; snprintf(p.history[i].arrivalDate, sizeof(p.history[i].arrivalDate), "%s", sub); sub = comma + 1; }
+                comma = strchr(sub, ','); if (comma) { *comma = 0; snprintf(p.history[i].symptoms, sizeof(p.history[i].symptoms), "%s", sub); sub = comma + 1; }
+                comma = strchr(sub, ','); if (comma) { *comma = 0; snprintf(p.history[i].doctorName, sizeof(p.history[i].doctorName), "%s", sub); sub = comma + 1; }
+                comma = strchr(sub, ','); if (comma) { *comma = 0; snprintf(p.history[i].treatment, sizeof(p.history[i].treatment), "%s", sub); sub = comma + 1; }
+                snprintf(p.history[i].prescribedMedicine, sizeof(p.history[i].prescribedMedicine), "%s", sub);
             }
         }
 
-        // Tạo Node và nối thẳng vào đuôi danh sách (không gọi hàm addPatient để tránh lỗi malloc kép)
-        Node* newNode = createNode(p);
+        Node *newNode = createNode(p);
         if (*head == NULL) {
             *head = newNode;
         } else {
-            Node* temp = *head;
-            while(temp->next != NULL) temp = temp->next;
+            Node *temp = *head;
+            while (temp->next != NULL) temp = temp->next;
             temp->next = newNode;
         }
     }
     fclose(f);
 }
 
-// 2.12 SAVE DATA TO FILE
-// Format: ID,Name,Age,Gender,VisitCount|Date,Symptoms,Doctor,Diagnosis|Date,...
 void saveToFile(Node *head) {
     FILE *f = fopen("patients.txt", "w");
     if (f == NULL) {
@@ -225,17 +248,17 @@ void saveToFile(Node *head) {
 
     Node *temp = head;
     while (temp != NULL) {
-        // 1. Ghi thông tin tĩnh
-        fprintf(f, "%s,%s,%d,%s,%d", 
-                temp->data.id, temp->data.name, temp->data.age, temp->data.gender, temp->data.visitCount);
-        
-        // 2. Ghi mảng lịch sử (dùng dấu | để ngăn cách các lần khám)
-        for(int i = 0; i < temp->data.visitCount; i++) {
-            fprintf(f, "|%s,%s,%s,%s", 
+        fprintf(f, "%s,%s,%s,%d,%s,%d",
+                temp->data.id, temp->data.phoneNumber, temp->data.name, 
+                temp->data.age, temp->data.gender, temp->data.visitCount);
+
+        for (int i = 0; i < temp->data.visitCount; i++) {
+            fprintf(f, "|%s,%s,%s,%s,%s",
                     temp->data.history[i].arrivalDate,
                     temp->data.history[i].symptoms,
-                    temp->data.history[i].assignedDoctor.name,
-                    temp->data.history[i].currentTreatment.diagnosis);
+                    temp->data.history[i].doctorName,
+                    temp->data.history[i].treatment,
+                    temp->data.history[i].prescribedMedicine);
         }
         fprintf(f, "\n");
         temp = temp->next;
@@ -243,9 +266,6 @@ void saveToFile(Node *head) {
     fclose(f);
 }
 
-// =======================
-// 2.13 FREE MEMORY
-// =======================
 void freeList(Node *head) {
     Node *temp;
     while (head != NULL) {
@@ -256,27 +276,24 @@ void freeList(Node *head) {
     }
 }
 
-// =======================
-// DISPLAY (TEST ONLY)
-// =======================
 void displayAllPatients(Node *head) {
     if (head == NULL) {
         printf("The patient list is empty.\n");
         return;
     }
-    printf("\n%-10s %-20s %-5s %-10s %-15s\n", "ID", "Name", "Age", "Gender", "Total Visits");
-    printf("-----------------------------------------------------------------\n");
+    printf("\n%-10s %-15s %-20s %-5s %-10s %-15s\n", "ID", "Phone", "Name", "Age", "Gender", "Total Visits");
+    printf("--------------------------------------------------------------------------------\n");
     Node *temp = head;
     while (temp != NULL) {
-        printf("%-10s %-20s %-5d %-10s %-15d\n",
-               temp->data.id, temp->data.name, temp->data.age,
-               temp->data.gender, temp->data.visitCount);
+        printf("%-10s %-15s %-20s %-5d %-10s %-15d\n",
+               temp->data.id, temp->data.phoneNumber, temp->data.name, 
+               temp->data.age, temp->data.gender, temp->data.visitCount);
         temp = temp->next;
     }
 }
 
 // =======================
-// MAIN (TEST FLOW)
+// MAIN FLOW
 // =======================
 int main() {
     Node *head = NULL;
@@ -291,70 +308,69 @@ int main() {
         choice = menu();
 
         switch (choice) {
-            case 1:
-                if (inputNewPatient(head, &p)) {
-                    addPatient(&head, p);
-                    printf("Success: Patient added successfully.\n");
-                }
-                break;
+        case 1:
+            if (inputNewPatient(head, &p)) {
+                addPatient(&head, p);
+                printf("Success: Patient added successfully.\n");
+            }
+            break;
 
-            case 2:
-                printf("Enter patient ID to search: ");
-                if (!readLine(id, sizeof(id)) || strlen(id) == 0) {
-                    printf("Error: Invalid ID input.\n");
-                    break;
-                }
-                found = searchPatient(head, id);
-                if (found == NULL) {
-                    printf("Error: Patient with ID '%s' not found.\n", id);
-                } else {
-                    displayPatientDetail(found);
-                }
+        case 2:
+            printf("Enter patient ID to search: ");
+            if (!readLine(id, sizeof(id)) || strlen(id) == 0) {
+                printf("Error: Invalid ID input.\n");
                 break;
+            }
+            found = searchPatient(head, id);
+            if (found == NULL) {
+                printf("Error: Patient with ID '%s' not found.\n", id);
+            } else {
+                displayPatientDetail(found);
+            }
+            break;
 
-            case 3:
-                printf("Enter patient ID to update: ");
-                if (!readLine(id, sizeof(id)) || strlen(id) == 0) {
-                    printf("Error: Invalid ID input.\n");
-                    break;
-                }
-                updatePatient(head, id);
+        case 3:
+            printf("Enter patient ID to update: ");
+            if (!readLine(id, sizeof(id)) || strlen(id) == 0) {
+                printf("Error: Invalid ID input.\n");
                 break;
+            }
+            updatePatient(head, id);
+            break;
 
-            case 4:
-                printf("Enter patient ID to delete: ");
-                if (!readLine(id, sizeof(id)) || strlen(id) == 0) {
-                    printf("Error: Invalid ID input.\n");
-                    break;
-                }
-                deletePatient(&head, id);
+        case 4:
+            printf("Enter patient ID to delete: ");
+            if (!readLine(id, sizeof(id)) || strlen(id) == 0) {
+                printf("Error: Invalid ID input.\n");
                 break;
+            }
+            deletePatient(&head, id);
+            break;
 
-            case 5:
-                displayAllPatients(head);
-                break;
+        case 5:
+            displayAllPatients(head);
+            break;
 
-            case 6:
-                mergeSort(&head);
-                printf("Success: Patients have been sorted by ID.\n");
-                break;
+        case 6:
+            mergeSort(&head);
+            printf("Success: Patients have been sorted by ID.\n");
+            break;
 
-            case 7:
-                saveToFile(head);
-                printf("Success: Data saved to patients.txt.\n");
-                break;
+        case 7:
+            saveToFile(head);
+            printf("Success: Data saved to patients.txt.\n");
+            break;
 
-            case 8:
-                saveToFile(head);
-                freeList(head);
-                printf("Program terminated. Data saved successfully.\n");
-                return 0;
+        case 8:
+            saveToFile(head);
+            freeList(head);
+            printf("Program terminated. Data saved successfully.\n");
+            return 0;
 
-            default:
-                printf("Error: Please choose a valid option from 1 to 8.\n");
-                break;
+        default:
+            printf("Error: Please choose a valid option from 1 to 8.\n");
+            break;
         }
     }
-
     return 0;
 }
