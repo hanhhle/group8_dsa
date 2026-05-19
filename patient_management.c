@@ -1,13 +1,10 @@
 #include "patient_management.h"
 
-// ==========================================
-// NHÓM HÀM TIỆN ÍCH (VALIDATION & INPUT)
-// ==========================================
+// VALIDATION & INPUT
 int readLine(char *buffer, size_t size) {
     if (fgets(buffer, (int)size, stdin) == NULL) {
         return 0;
     }
-    // Chống trôi lệnh tuyệt đối
     if (strchr(buffer, '\n') != NULL) {
         buffer[strcspn(buffer, "\n")] = '\0';
     } else {
@@ -42,9 +39,7 @@ int readInt(const char *prompt, int *outValue) {
     return 1;
 }
 
-// ==========================================
-// NHÓM HÀM GIAO DIỆN & NHẬP XUẤT (UI)
-// ==========================================
+// UI
 static void displayPatientDetail(const Node *node) {
     if (node == NULL) return;
 
@@ -106,7 +101,6 @@ static int inputNewPatient(Node *head, Patient *p) {
         printf("-> System Alert: Phone number NOT found! Registering a new profile...\n");
         
         int nextNum = getNextIdNumber(head);
-        // ĐÃ ĐỔI: Sử dụng "%d" thay vì "%02d" để sinh ID dạng số thuần túy: 1, 2, 3...
         snprintf(p->id, sizeof(p->id), "%d", nextNum);
         
         printf("-> Assigned New ID: %s\n", p->id);
